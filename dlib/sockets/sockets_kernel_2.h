@@ -345,6 +345,11 @@ namespace dlib
             const std::string& path
         );
 
+        friend int create_listener (
+            listener*& new_listener,
+            connection::socket_descriptor_type sock
+        );
+
     public:
 
         ~listener();
@@ -432,6 +437,11 @@ namespace dlib
         const std::string& path
     );
 
+    int create_listener (
+        listener*& new_listener,
+        connection::socket_descriptor_type sock
+    );
+
     int create_connection ( 
         connection*& new_connection,
         unsigned short foreign_port, 
@@ -454,6 +464,11 @@ namespace dlib
     int create_listener (
         std::unique_ptr<listener>& new_listener,
         const std::string& path
+    );
+
+    int create_listener (
+        std::unique_ptr<listener>& new_listener,
+        connection::socket_descriptor_type sock
     );
 
     int create_connection ( 

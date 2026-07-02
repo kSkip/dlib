@@ -1056,6 +1056,76 @@ namespace dlib
         return 0;
     }
 
+    int create_listener (
+        std::unique_ptr<listener>& new_listener,
+        connection::socket_descriptor_type sock
+    )
+    {
+        new_listener.reset();
+        listener* temp;
+        int status = create_listener(temp,sock);
+
+        if (status == 0)
+            new_listener.reset(temp);
+
+        return status;
+    }
+
+    int create_listener (
+        listener*& new_listener,
+        connection::socket_descriptor_type sock
+    )
+    {
+        if (sock == -1) return OTHER_ERROR;
+
+        sockets_startup();
+
+        sockaddr_storage sa;
+        dsocklen_t length = sizeof(sa);
+
+        if (getsockname(
+                sock,
+                reinterpret_cast<sockaddr*>(&sa),
+                &length) == -1)
+        {   // an error occurred
+            while (true)
+            {
+                int status = ::close(sock);
+                if (status == -1 && errno == EINTR)
+                    continue;
+                break;
+            }
+            return OTHER_ERROR;
+        }
+
+        if (sa.ss_family == AF_INET)
+        {
+            sockaddr_in& inet_addr = *reinterpret_cast<sockaddr_in*>(&sa);
+
+            int port = ntohs(inet_addr.sin_port);
+
+            char ip[16];
+            inet_ntop(AF_INET, &inet_addr.sin_addr, ip, sizeof(ip));
+
+            try { new_listener = new listener(sock, port, ip); }
+            catch(...) { close_socket(sock); return OTHER_ERROR; }
+        }
+        else if (sa.ss_family == AF_UNIX)
+        {
+            sockaddr_un& un_addr = *reinterpret_cast<sockaddr_un*>(&sa);
+
+            std::string path(un_addr.sun_path);
+            try { new_listener = new listener(sock, path); }
+            catch(...) { close_socket(sock); return OTHER_ERROR; }
+        }
+        else
+        {
+            return OTHER_ERROR;
+        }
+
+        return 0;
+    }
+
 // ----------------------------------------------------------------------------------------
 
     int create_connection (

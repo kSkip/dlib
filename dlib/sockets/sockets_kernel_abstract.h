@@ -151,6 +151,32 @@ namespace dlib
         std::unique_ptr smart pointer instead of a C pointer.
     !*/
 
+    int create_listener (
+        listener*& new_listener,
+        connection::socket_descriptor_type sock
+    );
+    /*!
+        requires
+            - sock is either a ICP/IP socket or a Unix socket
+            - sock is bound and configured to listening state
+        ensures
+            - if (#create_listener() == 0) then
+                - #new_listener == a pointer to a listener object that is listening on
+                  the specified socket for an incoming connection
+
+            - returns 0 if create_listener was successful
+            - returns OTHER_ERROR if some other error occurred
+    !*/
+
+    int create_listener (
+        std::unique_ptr<listener>& new_listener,
+        connection::socket_descriptor_type sock
+    );
+    /*!
+        This function is just an overload of the above function but it gives you a
+        std::unique_ptr smart pointer instead of a C pointer.
+    !*/
+
     int create_connection ( 
         connection*& new_connection,
         unsigned short foreign_port, 

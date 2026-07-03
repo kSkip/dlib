@@ -8,6 +8,7 @@
 
 #include <winsock2.h>
 #include <afunix.h>
+#include <io.h>
 
 #ifndef _WINSOCKAPI_
 #define _WINSOCKAPI_   /* Prevent inclusion of winsock.h in windows.h */
@@ -855,11 +856,10 @@ namespace dlib
         const char* sock_path = path.c_str();
 
         // remove any previous socket with the same path
-        DWORD attrib = GetFileAttributes(sock_path);
-        if (attrib != INVALID_FILE_ATTRIBUTES &&
-            !(attrib & FILE_ATTRIBUTE_DIRECTORY))
-        {
-            DeleteFile(sock_path);
+        if (access(sock_path, 0) == 0) {
+            if (unlink(sock_path) == -1) {
+                return OTHER_ERROR;
+            }
         }
 
         SOCKET sock = socket(AF_UNIX, SOCK_STREAM, 0);  // get a new socket
@@ -1233,7 +1233,7 @@ namespace dlib
         if (connect(
             sock,
             reinterpret_cast<sockaddr*>(&sa),
-            sizeof(sockaddr_in)
+            sizeof(sockaddr_un)
         ) == SOCKET_ERROR
             )
         {

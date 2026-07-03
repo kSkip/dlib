@@ -259,6 +259,13 @@ namespace dlib
             SOCKET_container sock,
             const std::string& path
         );
+        /*!
+            requires
+                sock is a socket handle and
+                sock is the handle for the connection through path
+            ensures
+                *this is initialized correctly with the above parameters
+        !*/
 
         // restricted functions
         connection(connection&);        // copy constructor
@@ -382,6 +389,13 @@ namespace dlib
             SOCKET_container sock,
             const std::string& path
         );
+        /*!
+            requires
+                sock is a socket handle                                             and
+                sock is listening on path
+            ensures
+                *this is initialized correctly with the above parameters
+        !*/
 
         // restricted functions
         listener(listener&);        // copy constructor

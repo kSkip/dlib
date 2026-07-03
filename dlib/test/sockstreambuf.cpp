@@ -130,7 +130,7 @@ namespace
         print_spinner();
         thread_running = true;
         listener* list;
-        if (create_listener(list,0))
+        if (create_listener(list,(unsigned short)0))
         {
             DLIB_TEST_MSG(false, "Unable to create a listener");
         }

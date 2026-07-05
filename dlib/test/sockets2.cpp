@@ -22,6 +22,7 @@ namespace
     // should start with "test."
     dlib::logger dlog("test.sockets2");
 
+    const std::string socket_name = "dlib-test-socket";
 
     class sockets2_tester : public tester, private multithreaded_object 
     {
@@ -33,15 +34,26 @@ namespace
 
         short port_num;
         string data_to_send;
+        bool test_unix;
 
         bool test_failed;
+
+        connection *get_connection(
+        )
+        {
+            if (test_unix) {
+                return connect(socket_name);
+            } else {
+                return connect("127.0.0.1", port_num);
+            }
+        }
 
         void write_thread (
         )
         {
             try
             {
-                std::unique_ptr<connection> con(connect("127.0.0.1", port_num));
+                std::unique_ptr<connection> con(get_connection());
 
                 // Send a copy of the data down the connection so we can test our the read() function
                 // that uses timeouts in the main thread.
@@ -65,7 +77,7 @@ namespace
         {
             try
             {
-                std::unique_ptr<connection> con(connect("127.0.0.1", port_num));
+                std::unique_ptr<connection> con(get_connection());
 
                 // just do nothing until the connection closes
                 char ch;
@@ -96,9 +108,20 @@ namespace
             register_thread(*this, &sockets2_tester::no_write_thread);
         }
 
+        ~sockets2_tester (
+        )
+        {
+            unlink(socket_name.c_str());
+        }
+
         void perform_test (
         )
         {
+            test_unix = false;
+            run_tests(0);
+            run_tests(40);
+
+            test_unix = true;
             run_tests(0);
             run_tests(40);
         }
@@ -123,7 +146,11 @@ namespace
 
 
             std::unique_ptr<listener> list;
-            DLIB_TEST(create_listener(list, port_num, "127.0.0.1") == 0);
+            if (test_unix) {
+                DLIB_TEST(create_listener(list, socket_name) == 0);
+            } else {
+                DLIB_TEST(create_listener(list, port_num, "127.0.0.1") == 0);
+            }
             DLIB_TEST(bool(list));
 
             // kick off the sending threads

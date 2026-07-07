@@ -1023,7 +1023,7 @@ namespace dlib
         sa.sun_family = AF_UNIX;
         strncpy(sa.sun_path, sock_path, sizeof(sa.sun_path)-1);
 
-        // bind the new socket to the requested port and ip
+        // bind the new socket to the requested path
         if (bind(sock,reinterpret_cast<sockaddr*>(&sa),sizeof(sockaddr_un)) == -1)
         {   // if there was an error
             close_socket(sock);

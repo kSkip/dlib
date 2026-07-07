@@ -157,7 +157,7 @@ namespace dlib
     );
     /*!
         requires
-            - sock is either a ICP/IP socket or a Unix socket
+            - sock is either a TCP/IP socket or a Unix socket
             - sock is bound and configured to listening state
         ensures
             - if (#create_listener() == 0) then

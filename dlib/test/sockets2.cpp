@@ -158,18 +158,19 @@ namespace
 
             dlog << LINFO << "data block size: " << data_to_send.size();
 
+            connection::socket_descriptor_type sock = 0;
             std::unique_ptr<listener> list;
             if (test_unix) {
                 if (test_user_sock) {
-                    DLIB_TEST(create_listener_from_socket(list,
-                              create_listening_socket(socket_name)) == 0);
+                    DLIB_TEST(create_listening_socket(sock, socket_name) == 0);
+                    DLIB_TEST(create_listener_from_socket(list, sock) == 0);
                 } else {
                     DLIB_TEST(create_listener(list, socket_name) == 0);
                 }
             } else {
                 if (test_user_sock) {
-                    DLIB_TEST(create_listener_from_socket(list,
-                              create_listening_socket(port_num, "127.0.0.1")) == 0);
+                    DLIB_TEST(create_listening_socket(sock, port_num, "127.0.0.1") == 0);
+                    DLIB_TEST(create_listener_from_socket(list, sock) == 0);
                 } else {
                     DLIB_TEST(create_listener(list, port_num, "127.0.0.1") == 0);
                 }

@@ -710,6 +710,139 @@ namespace dlib
 // ----------------------------------------------------------------------------------------
 // ----------------------------------------------------------------------------------------    
 
+    int create_listening_socket (
+        connection::socket_descriptor_type& sock,
+        unsigned short port,
+        const std::string& ip
+    )
+    {
+        sockaddr_in sa;  // local socket structure
+        ZeroMemory(&sa, sizeof(sockaddr_in)); // initialize sa
+
+        sock = socket(AF_INET, SOCK_STREAM, 0);  // get a new socket
+
+        // if socket() returned an error then return OTHER_ERROR
+        if (sock == INVALID_SOCKET)
+        {
+            return OTHER_ERROR;
+        }
+
+        // set the local socket structure 
+        sa.sin_family = AF_INET;
+        sa.sin_port = htons(port);
+        if (ip.empty())
+        {
+            // if the listener should listen on any IP
+            sa.sin_addr.S_un.S_addr = htons(INADDR_ANY);
+        }
+        else
+        {
+            // if there is a specific ip to listen on
+            sa.sin_addr.S_un.S_addr = inet_addr(ip.c_str());
+            // if inet_addr couldn't convert the ip then return an error
+            if (sa.sin_addr.S_un.S_addr == INADDR_NONE)
+            {
+                closesocket(sock);
+                return OTHER_ERROR;
+            }
+        }
+
+        // set the SO_REUSEADDR option
+        int flag_value = 1;
+        setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, reinterpret_cast<const char*>(&flag_value), sizeof(int));
+
+        // bind the new socket to the requested port and ip
+        if (bind(sock, reinterpret_cast<sockaddr*>(&sa), sizeof(sockaddr_in)) == SOCKET_ERROR)
+        {
+            const int err = WSAGetLastError();
+            // if there was an error 
+            closesocket(sock);
+
+            // if the port is already bound then return PORTINUSE
+            if (err == WSAEADDRINUSE)
+                return PORTINUSE;
+            else
+                return OTHER_ERROR;
+        }
+
+
+        // tell the new socket to listen
+        if (listen(sock, SOMAXCONN) == SOCKET_ERROR)
+        {
+            const int err = WSAGetLastError();
+            // if there was an error return OTHER_ERROR
+            closesocket(sock);
+
+            // if the port is already bound then return PORTINUSE
+            if (err == WSAEADDRINUSE)
+                return PORTINUSE;
+            else
+                return OTHER_ERROR;
+        }
+
+        return 0;
+    }
+
+    int create_listening_socket (
+        connection::socket_descriptor_type& sock,
+        const std::string& path
+    )
+    {
+        sockaddr_un sa;  // local socket structure
+        ZeroMemory(&sa, sizeof(sockaddr_un)); // initialize sa
+
+        const char* sock_path = path.c_str();
+
+        // remove any previous socket with the same path
+        if (access(sock_path, 0) == 0) {
+            if (unlink(sock_path) == -1) {
+                return OTHER_ERROR;
+            }
+        }
+
+        sock = socket(AF_UNIX, SOCK_STREAM, 0);  // get a new socket
+
+        // if socket() returned an error then return OTHER_ERROR
+        if (sock == INVALID_SOCKET)
+        {
+            return OTHER_ERROR;
+        }
+
+        // set the local socket structure 
+        sa.sun_family = AF_UNIX;
+        strncpy(sa.sun_path, sock_path, sizeof(sa.sun_path) - 1);
+
+        // bind the new socket to the requested path
+        if (bind(sock, reinterpret_cast<sockaddr*>(&sa), sizeof(sockaddr_un)) == SOCKET_ERROR)
+        {
+            const int err = WSAGetLastError();
+            // if there was an error 
+            closesocket(sock);
+
+            // if the port is already bound then return PORTINUSE
+            if (err == WSAEADDRINUSE)
+                return PORTINUSE;
+            else
+                return OTHER_ERROR;
+        }
+
+        // tell the new socket to listen
+        if (listen(sock, SOMAXCONN) == SOCKET_ERROR)
+        {
+            const int err = WSAGetLastError();
+            // if there was an error return OTHER_ERROR
+            closesocket(sock);
+
+            // if the port is already bound then return PORTINUSE
+            if (err == WSAEADDRINUSE)
+                return PORTINUSE;
+            else
+                return OTHER_ERROR;
+        }
+
+        return 0;
+    }
+
     int create_listener (
         std::unique_ptr<listener>& new_listener,
         unsigned short port,
@@ -736,69 +869,9 @@ namespace dlib
         // be called when program ends
         sockets_startup();
 
-        sockaddr_in sa;  // local socket structure
-        ZeroMemory(&sa,sizeof(sockaddr_in)); // initialize sa
-
-        SOCKET sock = socket (AF_INET, SOCK_STREAM, 0);  // get a new socket
-
-        // if socket() returned an error then return OTHER_ERROR
-        if (sock == INVALID_SOCKET )
-        {
-            return OTHER_ERROR;
-        }
-
-        // set the local socket structure 
-        sa.sin_family = AF_INET;
-        sa.sin_port = htons(port);
-        if (ip.empty())
-        {            
-            // if the listener should listen on any IP
-            sa.sin_addr.S_un.S_addr = htons(INADDR_ANY);
-        }
-        else
-        {
-            // if there is a specific ip to listen on
-            sa.sin_addr.S_un.S_addr = inet_addr(ip.c_str());
-            // if inet_addr couldn't convert the ip then return an error
-            if ( sa.sin_addr.S_un.S_addr == INADDR_NONE )
-            {
-                closesocket(sock); 
-                return OTHER_ERROR;                
-            }
-        }
-
-        // set the SO_REUSEADDR option
-        int flag_value = 1;
-        setsockopt(sock,SOL_SOCKET,SO_REUSEADDR,reinterpret_cast<const char*>(&flag_value),sizeof(int));
-
-        // bind the new socket to the requested port and ip
-        if (bind(sock,reinterpret_cast<sockaddr*>(&sa),sizeof(sockaddr_in))==SOCKET_ERROR)
-        {   
-            const int err = WSAGetLastError();
-            // if there was an error 
-            closesocket(sock); 
-
-            // if the port is already bound then return PORTINUSE
-            if (err == WSAEADDRINUSE)
-                return PORTINUSE;
-            else
-                return OTHER_ERROR;            
-        }
-
-
-        // tell the new socket to listen
-        if ( listen(sock,SOMAXCONN) == SOCKET_ERROR)
-        {
-            const int err = WSAGetLastError();
-            // if there was an error return OTHER_ERROR
-            closesocket(sock); 
-
-            // if the port is already bound then return PORTINUSE
-            if (err == WSAEADDRINUSE)
-                return PORTINUSE;
-            else
-                return OTHER_ERROR;  
-        }
+        SOCKET sock;
+        int error = create_listening_socket(sock, port, ip);
+        if (error < 0) return error;
 
         // determine the port used if necessary
         if (port == 0)
@@ -850,57 +923,9 @@ namespace dlib
         // be called when program ends
         sockets_startup();
 
-        sockaddr_un sa;  // local socket structure
-        ZeroMemory(&sa, sizeof(sockaddr_un)); // initialize sa
-
-        const char* sock_path = path.c_str();
-
-        // remove any previous socket with the same path
-        if (access(sock_path, 0) == 0) {
-            if (unlink(sock_path) == -1) {
-                return OTHER_ERROR;
-            }
-        }
-
-        SOCKET sock = socket(AF_UNIX, SOCK_STREAM, 0);  // get a new socket
-
-        // if socket() returned an error then return OTHER_ERROR
-        if (sock == INVALID_SOCKET)
-        {
-            return OTHER_ERROR;
-        }
-
-        // set the local socket structure 
-        sa.sun_family = AF_UNIX;
-        strncpy(sa.sun_path, sock_path, sizeof(sa.sun_path) - 1);
-
-        // bind the new socket to the requested path
-        if (bind(sock, reinterpret_cast<sockaddr*>(&sa), sizeof(sockaddr_un)) == SOCKET_ERROR)
-        {
-            const int err = WSAGetLastError();
-            // if there was an error 
-            closesocket(sock);
-
-            // if the port is already bound then return PORTINUSE
-            if (err == WSAEADDRINUSE)
-                return PORTINUSE;
-            else
-                return OTHER_ERROR;
-        }
-
-        // tell the new socket to listen
-        if (listen(sock, SOMAXCONN) == SOCKET_ERROR)
-        {
-            const int err = WSAGetLastError();
-            // if there was an error return OTHER_ERROR
-            closesocket(sock);
-
-            // if the port is already bound then return PORTINUSE
-            if (err == WSAEADDRINUSE)
-                return PORTINUSE;
-            else
-                return OTHER_ERROR;
-        }
+        SOCKET sock;
+        int error = create_listening_socket(sock, path);
+        if (error < 0) return error;
 
         // initialize a listener object on the heap with the new socket
         try { new_listener = new listener(sock, path); }
@@ -916,7 +941,7 @@ namespace dlib
     {
         new_listener.reset();
         listener* temp;
-        int status = create_listener(temp, sock);
+        int status = create_listener_from_socket(temp, sock);
 
         if (status == 0)
             new_listener.reset(temp);

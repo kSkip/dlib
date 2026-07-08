@@ -404,6 +404,17 @@ namespace dlib
 
 // ----------------------------------------------------------------------------------------
 
+    int create_listening_socket (
+        connection::socket_descriptor_type& sock,
+        unsigned short port,
+        const std::string& ip
+    );
+
+    int create_listening_socket (
+        connection::socket_descriptor_type& sock,
+        const std::string& path
+    );
+
     int create_listener (
         listener*& new_listener,
         unsigned short port,

@@ -93,6 +93,46 @@ namespace dlib
 // ----------------------------------------------------------------------------------------
 // ----------------------------------------------------------------------------------------    
 
+    connection::socket_descriptor_type
+    create_listening_socket (
+        unsigned short port,
+        const std::string& ip
+    );
+    /*!
+        requires
+            - 0 <= port <= 65535
+        ensures
+            - returns a valid socket descriptor if create_listening_socket
+              was successful
+            - if successful then
+                - return value is a socket object that is listening on
+                  the specified port and ip for an incoming connection 
+                - if (ip == "") then 
+                    - the new socket will be listening on all interfaces 
+                - if (port == 0) then 
+                    - the operating system will assign a free port to listen on 
+
+            - returns PORTINUSE if the specified local port was already in use 
+            - returns OTHER_ERROR if some other error occurred
+    !*/
+
+    connection::socket_descriptor_type
+    create_listening_socket (
+        const std::string& path
+    );
+    /*!
+        requires
+            - path.empty() == false
+        ensures
+            - returns a valid socket descriptor if create_listening_socket
+              was successful
+            - if successful then
+                - return value is a object that is listening on 
+                  the specified path for an incoming connection 
+
+            - returns OTHER_ERROR if some other error occurred
+    !*/
+
     int create_listener (
         listener*& new_listener,
         unsigned short port,

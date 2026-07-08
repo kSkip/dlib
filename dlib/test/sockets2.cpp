@@ -35,6 +35,7 @@ namespace
         short port_num;
         string data_to_send;
         bool test_unix;
+        bool test_user_sock;
 
         bool test_failed;
 
@@ -118,12 +119,25 @@ namespace
         )
         {
             test_unix = false;
+            test_user_sock = false;
             run_tests(0);
             run_tests(40);
 
             test_unix = true;
+            test_user_sock = false;
             run_tests(0);
             run_tests(40);
+
+            test_unix = false;
+            test_user_sock = true;
+            run_tests(0);
+            run_tests(40);
+
+            test_unix = true;
+            test_user_sock = true;
+            run_tests(0);
+            run_tests(40);
+
         }
 
         void run_tests (
@@ -144,12 +158,21 @@ namespace
 
             dlog << LINFO << "data block size: " << data_to_send.size();
 
-
             std::unique_ptr<listener> list;
             if (test_unix) {
-                DLIB_TEST(create_listener(list, socket_name) == 0);
+                if (test_user_sock) {
+                    DLIB_TEST(create_listener_from_socket(list,
+                              create_listening_socket(socket_name)) == 0);
+                } else {
+                    DLIB_TEST(create_listener(list, socket_name) == 0);
+                }
             } else {
-                DLIB_TEST(create_listener(list, port_num, "127.0.0.1") == 0);
+                if (test_user_sock) {
+                    DLIB_TEST(create_listener_from_socket(list,
+                              create_listening_socket(port_num, "127.0.0.1")) == 0);
+                } else {
+                    DLIB_TEST(create_listener(list, port_num, "127.0.0.1") == 0);
+                }
             }
             DLIB_TEST(bool(list));
 

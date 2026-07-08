@@ -819,31 +819,12 @@ namespace dlib
 // ----------------------------------------------------------------------------------------
 // ----------------------------------------------------------------------------------------    
 
-    int create_listener (
-        std::unique_ptr<listener>& new_listener,
+    connection::socket_descriptor_type
+    create_listening_socket (
         unsigned short port,
         const std::string& ip
     )
     {
-        new_listener.reset();
-        listener* temp;
-        int status = create_listener(temp,port,ip);
-
-        if (status == 0)
-            new_listener.reset(temp);
-
-        return status;
-    }
-
-    int create_listener (
-        listener*& new_listener,
-        unsigned short port,
-        const std::string& ip
-    )
-    {
-        sockets_startup();
-
-
         sockaddr_in sa;  // local socket structure
         memset(&sa,'\0',sizeof(sockaddr_in)); // initialize sa
         
@@ -912,53 +893,14 @@ namespace dlib
                 return OTHER_ERROR;   
         }
 
-        // determine the used local port if necessary
-        if (port == 0)
-        {
-            sockaddr_in local_info;
-            dsocklen_t length = sizeof(sockaddr_in);
-            if ( getsockname(
-                sock,
-                reinterpret_cast<sockaddr*>(&local_info),
-                &length
-                ) == -1)
-            {
-                close_socket(sock);
-                return OTHER_ERROR;
-            }
-            port = ntohs(local_info.sin_port);            
-        }
-
-        // initialize a listener object on the heap with the new socket
-        try { new_listener = new listener(sock,port,ip); }
-        catch(...) { close_socket(sock); return OTHER_ERROR; }
-
-        return 0;
+        return sock;
     }
 
-    int create_listener (
-        std::unique_ptr<listener>& new_listener,
+    connection::socket_descriptor_type
+    create_listening_socket (
         const std::string& path
     )
     {
-        new_listener.reset();
-        listener* temp;
-        int status = create_listener(temp,path);
-
-        if (status == 0)
-            new_listener.reset(temp);
-
-        return status;
-    }
-
-    int create_listener (
-        listener*& new_listener,
-        const std::string& path
-    )
-    {
-        sockets_startup();
-
-
         sockaddr_un sa;  // local socket structure
         memset(&sa,'\0',sizeof(sockaddr_un)); // initialize sa
 
@@ -1009,6 +951,85 @@ namespace dlib
                 return OTHER_ERROR;
         }
 
+        return sock;
+    }
+
+    int create_listener (
+        std::unique_ptr<listener>& new_listener,
+        unsigned short port,
+        const std::string& ip
+    )
+    {
+        new_listener.reset();
+        listener* temp;
+        int status = create_listener(temp,port,ip);
+
+        if (status == 0)
+            new_listener.reset(temp);
+
+        return status;
+    }
+
+    int create_listener (
+        listener*& new_listener,
+        unsigned short port,
+        const std::string& ip
+    )
+    {
+        sockets_startup();
+
+        int sock = create_listening_socket(port, ip);
+        if (sock < 0) return sock;
+
+        // determine the used local port if necessary
+        if (port == 0)
+        {
+            sockaddr_in local_info;
+            dsocklen_t length = sizeof(sockaddr_in);
+            if ( getsockname(
+                sock,
+                reinterpret_cast<sockaddr*>(&local_info),
+                &length
+                ) == -1)
+            {
+                close_socket(sock);
+                return OTHER_ERROR;
+            }
+            port = ntohs(local_info.sin_port);            
+        }
+
+        // initialize a listener object on the heap with the new socket
+        try { new_listener = new listener(sock,port,ip); }
+        catch(...) { close_socket(sock); return OTHER_ERROR; }
+
+        return 0;
+    }
+
+    int create_listener (
+        std::unique_ptr<listener>& new_listener,
+        const std::string& path
+    )
+    {
+        new_listener.reset();
+        listener* temp;
+        int status = create_listener(temp,path);
+
+        if (status == 0)
+            new_listener.reset(temp);
+
+        return status;
+    }
+
+    int create_listener (
+        listener*& new_listener,
+        const std::string& path
+    )
+    {
+        sockets_startup();
+
+        int sock = create_listening_socket(path);
+        if (sock < 0) return sock;
+
         // initialize a listener object on the heap with the new socket
         try { new_listener = new listener(sock,path); }
         catch(...) { close_socket(sock); return OTHER_ERROR; }
@@ -1023,7 +1044,7 @@ namespace dlib
     {
         new_listener.reset();
         listener* temp;
-        int status = create_listener(temp,sock);
+        int status = create_listener_from_socket(temp, sock);
 
         if (status == 0)
             new_listener.reset(temp);
@@ -1036,7 +1057,7 @@ namespace dlib
         connection::socket_descriptor_type sock
     )
     {
-        if (sock == -1) return OTHER_ERROR;
+        if (sock < 0) return OTHER_ERROR;
 
         sockets_startup();
 
@@ -1048,13 +1069,7 @@ namespace dlib
                 reinterpret_cast<sockaddr*>(&sa),
                 &length) == -1)
         {   // an error occurred
-            while (true)
-            {
-                int status = ::close(sock);
-                if (status == -1 && errno == EINTR)
-                    continue;
-                break;
-            }
+            close_socket(sock);
             return OTHER_ERROR;
         }
 

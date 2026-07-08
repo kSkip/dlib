@@ -53,6 +53,29 @@ namespace dlib
 
 // ----------------------------------------------------------------------------------------
 
+    static void
+    close_socket (
+        int sock
+    )
+    /*!
+        requires
+            - sock == a socket
+        ensures
+            - sock has been closed
+    !*/
+    {
+        while (true)
+        {
+            int status = ::close(sock);
+            if (status == -1 && errno == EINTR)
+                continue;
+            break;
+        }
+    }
+
+// ----------------------------------------------------------------------------------------
+
+
     // lookup functions
 
     int
@@ -498,13 +521,7 @@ namespace dlib
     ~connection (
     )        
     {
-        while (true)
-        {
-            int status = ::close(connection_socket);  
-            if (status == -1 && errno == EINTR)
-                continue;
-            break;
-        }
+        close_socket(connection_socket);
     }
 
 
@@ -728,13 +745,7 @@ namespace dlib
                     ) == -1
                 )
                 {   // an error occurred
-                    while (true)
-                    {
-                        int status = ::close(incoming);
-                        if (status == -1 && errno == EINTR)
-                            continue;
-                        break;
-                    }
+                    close_socket(incoming);
                     return OTHER_ERROR;
                 }
                 local_ip = const_cast<char*> (
@@ -752,13 +763,7 @@ namespace dlib
             int flag_value = 1;
             if (setsockopt(incoming,SOL_SOCKET,SO_OOBINLINE,reinterpret_cast<const void*>(&flag_value),sizeof(int)))
             {
-                while (true)
-                {
-                    int status = ::close(incoming);
-                    if (status == -1 && errno == EINTR)
-                        continue;
-                    break;
-                }
+                close_socket(incoming);
                 return OTHER_ERROR;
             }
 
@@ -777,13 +782,7 @@ namespace dlib
             }
             catch (...)
             {
-                while (true)
-                {
-                    int status = ::close(incoming);
-                    if (status == -1 && errno == EINTR)
-                        continue;
-                    break;
-                }
+                close_socket(incoming);
                 return OTHER_ERROR;
             }
 
@@ -798,32 +797,15 @@ namespace dlib
                     reinterpret_cast<sockaddr*>(&un_addr),
                     &length) == -1)
             {   // an error occurred
-                while (true)
-                {
-                    int status = ::close(incoming);
-                    if (status == -1 && errno == EINTR)
-                        continue;
-                    break;
-                }
+                close_socket(incoming);
                 return OTHER_ERROR;
             }
 
+            std::string path(un_addr.sun_path);
+
             // make a new connection object for this new connection
-            try
-            {
-                new_connection = new connection (incoming, un_addr.sun_path);
-            }
-            catch (...)
-            {
-                while (true)
-                {
-                    int status = ::close(incoming);
-                    if (status == -1 && errno == EINTR)
-                        continue;
-                    break;
-                }
-                return OTHER_ERROR;
-            }
+            try { new_connection = new connection (incoming, path); }
+            catch (...) { close_socket(incoming); return OTHER_ERROR; }
 
         } else {
             return OTHER_ERROR;
@@ -835,28 +817,6 @@ namespace dlib
 // ----------------------------------------------------------------------------------------
     // socket creation functions
 // ----------------------------------------------------------------------------------------
-// ----------------------------------------------------------------------------------------    
-
-    static void
-    close_socket (
-        int sock
-    )
-    /*! 
-        requires
-            - sock == a socket
-        ensures
-            - sock has been closed
-    !*/
-    {
-        while (true)
-        {
-            int status = ::close(sock);
-            if (status == -1 && errno == EINTR)
-                continue;
-            break;
-        }
-    }
-
 // ----------------------------------------------------------------------------------------    
 
     int create_listener (

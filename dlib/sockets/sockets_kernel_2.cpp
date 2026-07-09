@@ -819,8 +819,8 @@ namespace dlib
 // ----------------------------------------------------------------------------------------
 // ----------------------------------------------------------------------------------------    
 
-    connection::socket_descriptor_type
-    create_listening_socket (
+    int create_listening_socket (
+        connection::socket_descriptor_type& sock,
         unsigned short port,
         const std::string& ip
     )
@@ -829,7 +829,7 @@ namespace dlib
         memset(&sa,'\0',sizeof(sockaddr_in)); // initialize sa
         
 
-        int sock = socket (AF_INET, SOCK_STREAM, 0);  // get a new socket
+        sock = socket (AF_INET, SOCK_STREAM, 0);  // get a new socket
 
         // if socket() returned an error then return OTHER_ERROR
         if (sock == -1)
@@ -893,11 +893,11 @@ namespace dlib
                 return OTHER_ERROR;   
         }
 
-        return sock;
+        return 0;
     }
 
-    connection::socket_descriptor_type
-    create_listening_socket (
+    int create_listening_socket (
+        connection::socket_descriptor_type& sock,
         const std::string& path
     )
     {
@@ -913,7 +913,7 @@ namespace dlib
             }
         }
 
-        int sock = socket (AF_UNIX, SOCK_STREAM, 0);  // get a new socket
+        sock = socket (AF_UNIX, SOCK_STREAM, 0);  // get a new socket
 
         // if socket() returned an error then return OTHER_ERROR
         if (sock == -1)
@@ -951,7 +951,7 @@ namespace dlib
                 return OTHER_ERROR;
         }
 
-        return sock;
+        return 0;
     }
 
     int create_listener (
@@ -978,8 +978,9 @@ namespace dlib
     {
         sockets_startup();
 
-        int sock = create_listening_socket(port, ip);
-        if (sock < 0) return sock;
+        int sock;
+        int error = create_listening_socket(sock, port, ip);
+        if (error < 0) return error;
 
         // determine the used local port if necessary
         if (port == 0)
@@ -1027,8 +1028,9 @@ namespace dlib
     {
         sockets_startup();
 
-        int sock = create_listening_socket(path);
-        if (sock < 0) return sock;
+        int sock;
+        int error = create_listening_socket(sock, path);
+        if (error < 0) return error;
 
         // initialize a listener object on the heap with the new socket
         try { new_listener = new listener(sock,path); }

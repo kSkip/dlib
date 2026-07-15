@@ -2,6 +2,7 @@
 // License: Boost Software License   See LICENSE.txt for the full license.
 
 #include <algorithm>
+#include <cstdio>
 #include <memory>
 
 #include "tester.h"
@@ -23,6 +24,12 @@ namespace
     dlib::logger dlog("test.sockets2");
 
     const std::string socket_name = "dlib-test-socket";
+
+    void remove_test_socket (
+    )
+    {
+        std::remove(socket_name.c_str());
+    }
 
     class sockets2_tester : public tester, private multithreaded_object 
     {
@@ -112,12 +119,14 @@ namespace
         ~sockets2_tester (
         )
         {
-            unlink(socket_name.c_str());
+            remove_test_socket();
         }
 
         void perform_test (
         )
         {
+            test_bad_unix_socket_paths();
+
             test_unix = false;
             test_user_sock = false;
             run_tests(0);
@@ -138,6 +147,18 @@ namespace
             run_tests(0);
             run_tests(40);
 
+        }
+
+        void test_bad_unix_socket_paths (
+        )
+        {
+            const std::string long_socket_name(1000, 'x');
+            connection::socket_descriptor_type sock = 0;
+            connection* con = 0;
+
+            DLIB_TEST(create_listening_socket(sock, long_socket_name) == OTHER_ERROR);
+            DLIB_TEST(create_connection(con, long_socket_name) == OTHER_ERROR);
+            DLIB_TEST(con == 0);
         }
 
         void run_tests (
@@ -146,6 +167,8 @@ namespace
         {
             // make sure there aren't any threads running
             wait();
+            if (test_unix)
+                remove_test_socket();
 
             port_num = 5000;
             test_failed = false;
@@ -241,6 +264,8 @@ namespace
 
             // wait for all the sending threads to terminate
             wait();
+            if (test_unix)
+                remove_test_socket();
         }
     };
 
@@ -251,5 +276,3 @@ namespace
     sockets2_tester a;
 
 }
-
-

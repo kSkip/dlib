@@ -8,7 +8,6 @@
 
 #include <winsock2.h>
 #include <afunix.h>
-#include <io.h>
 
 #ifndef _WINSOCKAPI_
 #define _WINSOCKAPI_   /* Prevent inclusion of winsock.h in windows.h */
@@ -716,6 +715,10 @@ namespace dlib
         const std::string& ip
     )
     {
+        // ensure that WSAStartup has been called and WSACleanup will eventually
+        // be called when program ends
+        sockets_startup();
+
         sockaddr_in sa;  // local socket structure
         ZeroMemory(&sa, sizeof(sockaddr_in)); // initialize sa
 
@@ -727,7 +730,7 @@ namespace dlib
             return OTHER_ERROR;
         }
 
-        // set the local socket structure 
+        // set the local socket structure
         sa.sin_family = AF_INET;
         sa.sin_port = htons(port);
         if (ip.empty())
@@ -755,7 +758,7 @@ namespace dlib
         if (bind(sock, reinterpret_cast<sockaddr*>(&sa), sizeof(sockaddr_in)) == SOCKET_ERROR)
         {
             const int err = WSAGetLastError();
-            // if there was an error 
+            // if there was an error
             closesocket(sock);
 
             // if the port is already bound then return PORTINUSE
@@ -788,17 +791,15 @@ namespace dlib
         const std::string& path
     )
     {
+        // ensure that WSAStartup has been called and WSACleanup will eventually
+        // be called when program ends
+        sockets_startup();
+
         sockaddr_un sa;  // local socket structure
         ZeroMemory(&sa, sizeof(sockaddr_un)); // initialize sa
 
-        const char* sock_path = path.c_str();
-
-        // remove any previous socket with the same path
-        if (access(sock_path, 0) == 0) {
-            if (unlink(sock_path) == -1) {
-                return OTHER_ERROR;
-            }
-        }
+        if (path.empty() || sizeof(sa.sun_path) <= path.size())
+            return OTHER_ERROR;
 
         sock = socket(AF_UNIX, SOCK_STREAM, 0);  // get a new socket
 
@@ -808,15 +809,15 @@ namespace dlib
             return OTHER_ERROR;
         }
 
-        // set the local socket structure 
+        // set the local socket structure
         sa.sun_family = AF_UNIX;
-        strncpy(sa.sun_path, sock_path, sizeof(sa.sun_path) - 1);
+        strncpy(sa.sun_path, path.c_str(), sizeof(sa.sun_path) - 1);
 
         // bind the new socket to the requested path
         if (bind(sock, reinterpret_cast<sockaddr*>(&sa), sizeof(sockaddr_un)) == SOCKET_ERROR)
         {
             const int err = WSAGetLastError();
-            // if there was an error 
+            // if there was an error
             closesocket(sock);
 
             // if the port is already bound then return PORTINUSE
@@ -865,7 +866,7 @@ namespace dlib
         const std::string& ip
     )
     {
-        // ensure that WSAStartup has been called and WSACleanup will eventually 
+        // ensure that WSAStartup has been called and WSACleanup will eventually
         // be called when program ends
         sockets_startup();
 
@@ -919,7 +920,7 @@ namespace dlib
         const std::string& path
     )
     {
-        // ensure that WSAStartup has been called and WSACleanup will eventually 
+        // ensure that WSAStartup has been called and WSACleanup will eventually
         // be called when program ends
         sockets_startup();
 
@@ -956,7 +957,7 @@ namespace dlib
     {
         if (sock == INVALID_SOCKET) return OTHER_ERROR;
 
-        // ensure that WSAStartup has been called and WSACleanup will eventually 
+        // ensure that WSAStartup has been called and WSACleanup will eventually
         // be called when program ends
         sockets_startup();
 
@@ -1034,7 +1035,7 @@ namespace dlib
         const std::string& local_ip
     )
     {
-        // ensure that WSAStartup has been called and WSACleanup 
+        // ensure that WSAStartup has been called and WSACleanup
         // will eventually be called when program ends
         sockets_startup();
 
@@ -1234,13 +1235,16 @@ namespace dlib
         const std::string& path
     )
     {
-        // ensure that WSAStartup has been called and WSACleanup 
+        // ensure that WSAStartup has been called and WSACleanup
         // will eventually be called when program ends
         sockets_startup();
 
 
         sockaddr_un sa;  // local socket structure
         ZeroMemory(&sa, sizeof(sockaddr_un)); // initialize local_sa
+
+        if (path.empty() || sizeof(sa.sun_path) <= path.size())
+            return OTHER_ERROR;
 
         SOCKET sock = socket(AF_UNIX, SOCK_STREAM, 0);  // get a new socket
 
@@ -1250,11 +1254,11 @@ namespace dlib
             return OTHER_ERROR;
         }
 
-        // set the foreign socket structure 
+        // set the foreign socket structure
         sa.sun_family = AF_UNIX;
         strncpy(sa.sun_path, path.c_str(), sizeof(sa.sun_path) - 1);
 
-        // connect the socket        
+        // connect the socket
         if (connect(
             sock,
             reinterpret_cast<sockaddr*>(&sa),
@@ -1288,4 +1292,3 @@ namespace dlib
 #endif // WIN32
 
 #endif // DLIB_SOCKETS_KERNEL_1_CPp_
-

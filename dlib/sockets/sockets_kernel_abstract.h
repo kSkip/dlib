@@ -123,11 +123,21 @@ namespace dlib
         requires
             - path.empty() == false
         ensures
+            - path identifies the local filesystem pathname used as the address
+              of a Unix domain socket.  A client connects by passing this same
+              pathname to create_connection().
+            - this function does not remove an existing file or socket at path.
+              If path is already in use, or if the operating system can't create
+              a Unix domain socket address at path, this function returns
+              OTHER_ERROR.
             - if (#create_listening_socket() == 0) then
                 - #sock == a socket object that is listening on
-                  the specified path for an incoming connection
+                  the Unix domain socket address named by path for an incoming
+                  connection
 
             - returns 0 if create_listening_socket was successful
+            - returns OTHER_ERROR if path is too long for the platform's unix
+              socket address structure
             - returns OTHER_ERROR if some other error occurred
     !*/
 
@@ -172,11 +182,21 @@ namespace dlib
         requires
             - path.empty() == false
         ensures
+            - path identifies the local filesystem pathname used as the address
+              of a Unix domain socket.  A client connects by passing this same
+              pathname to create_connection().
+            - this function does not remove an existing file or socket at path.
+              If path is already in use, or if the operating system can't create
+              a Unix domain socket address at path, this function returns
+              OTHER_ERROR.
             - if (#create_listener() == 0) then
-                - #new_listener == a pointer to a listener object that is listening on 
-                  the specified unix socket for an incoming connection 
+                - #new_listener == a pointer to a listener object that is listening on
+                  the Unix domain socket address named by path for an incoming
+                  connection
 
-            - returns 0 if create_listener was successful 
+            - returns 0 if create_listener was successful
+            - returns OTHER_ERROR if path is too long for the platform's unix
+              socket address structure
             - returns OTHER_ERROR if some other error occurred
     !*/
 
@@ -198,11 +218,11 @@ namespace dlib
             - sock is either a TCP/IP socket or a Unix socket
             - sock is bound and configured to listening state
         ensures
-            - if (#create_listener() == 0) then
+            - if (#create_listener_from_socket() == 0) then
                 - #new_listener == a pointer to a listener object that is listening on
                   the specified socket for an incoming connection
 
-            - returns 0 if create_listener was successful
+            - returns 0 if create_listener_from_socket was successful
             - returns OTHER_ERROR if some other error occurred
     !*/
 
@@ -262,12 +282,17 @@ namespace dlib
         requires
             - path.empty() == false
         ensures
+            - path identifies the local filesystem pathname used as the address
+              of a Unix domain socket.  It should be the same pathname that was
+              used to create the listening Unix domain socket.
             - if (#create_connection() == 0) then
                 - #new_connection  == a pointer to a connection object that is connected
-                  to a local unix socket at path
+                  to the Unix domain socket address named by path
                 - #new_connection->user_data == 0
 
             - returns 0 if create_connection was successful
+            - returns OTHER_ERROR if path is too long for the platform's unix
+              socket address structure
             - returns OTHER_ERROR if some other error occurred
         !*/
 
@@ -461,7 +486,8 @@ namespace dlib
             requires
                 - is_inet() == false
             ensures
-                - returns the filesystem path  of the local socket this connection is using
+                - returns the filesystem pathname that was used as the Unix
+                  domain socket address for this connection
         !*/
 
         bool is_inet (
@@ -546,9 +572,10 @@ namespace dlib
     {
         /*!
             WHAT THIS OBJECT REPRESENTS
-                This object represents a TCP socket waiting for incoming connections.
+                This object represents a TCP socket or Unix domain socket waiting
+                for incoming connections.
                 Calling accept returns a pointer to any new incoming connections on its
-                port.
+                port or Unix domain socket pathname.
 
                 Instances of this class can only be created by using the 
                 create_listener function defined below.
@@ -632,7 +659,8 @@ namespace dlib
             requires
                 - is_inet() == false
             ensures
-                - returns the filesystem path of the listening socket
+                - returns the filesystem pathname that was used as the Unix
+                  domain socket address for this listener
         !*/
 
         bool is_inet (
@@ -651,4 +679,3 @@ namespace dlib
 }
 
 #endif // DLIB_SOCKETS_KERNEl_ABSTRACT_
-

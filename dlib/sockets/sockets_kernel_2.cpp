@@ -825,9 +825,10 @@ namespace dlib
         const std::string& ip
     )
     {
+        sockets_startup();
+
         sockaddr_in sa;  // local socket structure
         memset(&sa,'\0',sizeof(sockaddr_in)); // initialize sa
-        
 
         sock = socket (AF_INET, SOCK_STREAM, 0);  // get a new socket
 
@@ -837,11 +838,11 @@ namespace dlib
             return OTHER_ERROR;
         }
 
-        // set the local socket structure 
+        // set the local socket structure
         sa.sin_family = AF_INET;
         sa.sin_port = htons(port);
         if (ip.empty())
-        {            
+        {
             // if the listener should listen on any IP
             sa.sin_addr.s_addr = htons(INADDR_ANY);
         }
@@ -869,14 +870,14 @@ namespace dlib
 
         // bind the new socket to the requested port and ip
         if (bind(sock,reinterpret_cast<sockaddr*>(&sa),sizeof(sockaddr_in)) == -1)
-        {   // if there was an error 
-            close_socket(sock); 
+        {   // if there was an error
+            close_socket(sock);
 
             // if the port is already bound then return PORTINUSE
             if (errno == EADDRINUSE)
                 return PORTINUSE;
             else
-                return OTHER_ERROR;            
+                return OTHER_ERROR;
         }
 
 
@@ -884,13 +885,13 @@ namespace dlib
         if ( listen(sock,SOMAXCONN) == -1)
         {
             // if there was an error return OTHER_ERROR
-            close_socket(sock); 
+            close_socket(sock);
 
             // if the port is already bound then return PORTINUSE
             if (errno == EADDRINUSE)
                 return PORTINUSE;
             else
-                return OTHER_ERROR;   
+                return OTHER_ERROR;
         }
 
         return 0;
@@ -901,17 +902,13 @@ namespace dlib
         const std::string& path
     )
     {
+        sockets_startup();
+
         sockaddr_un sa;  // local socket structure
         memset(&sa,'\0',sizeof(sockaddr_un)); // initialize sa
 
-        const char *sock_path = path.c_str();
-
-        // remove any previous socket with the same path
-        if (access(sock_path, F_OK) == 0) {
-            if (unlink(sock_path) == -1) {
-                return OTHER_ERROR;
-            }
-        }
+        if (path.empty() || sizeof(sa.sun_path) <= path.size())
+            return OTHER_ERROR;
 
         sock = socket (AF_UNIX, SOCK_STREAM, 0);  // get a new socket
 
@@ -923,7 +920,7 @@ namespace dlib
 
         // set the local socket structure
         sa.sun_family = AF_UNIX;
-        strncpy(sa.sun_path, sock_path, sizeof(sa.sun_path)-1);
+        strncpy(sa.sun_path, path.c_str(), sizeof(sa.sun_path)-1);
 
         // bind the new socket to the requested path
         if (bind(sock,reinterpret_cast<sockaddr*>(&sa),sizeof(sockaddr_un)) == -1)
@@ -1324,7 +1321,8 @@ namespace dlib
         sockaddr_un sa;  // local socket structure
         memset(&sa,'\0',sizeof(sockaddr_un)); // initialize sa
 
-        dsocklen_t length;
+        if (path.empty() || sizeof(sa.sun_path) <= path.size())
+            return OTHER_ERROR;
 
         int sock = socket (AF_UNIX, SOCK_STREAM, 0);  // get a new socket
 
@@ -1371,4 +1369,3 @@ namespace dlib
 #endif // DLIB_POSIX
 
 #endif // DLIB_SOCKETS_KERNEL_2_CPp_
-

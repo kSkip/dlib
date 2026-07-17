@@ -49,6 +49,10 @@ namespace dlib
             in_buffer(new char[in_buffer_size]),
             autoflush(false)
         {
+            DLIB_ASSERT(out_buffer_size > 0);
+            DLIB_ASSERT(in_buffer_size > 0);
+            DLIB_ASSERT(max_putback >= 0);
+            DLIB_ASSERT(max_putback < in_buffer_size, "putback area cannot be larger than the get area");
             init();
         }
 
@@ -64,6 +68,10 @@ namespace dlib
                 max_putback_
             )
         {
+            DLIB_ASSERT(out_buffer_size > 0);
+            DLIB_ASSERT(in_buffer_size > 0);
+            DLIB_ASSERT(max_putback >= 0);
+            DLIB_ASSERT(max_putback < in_buffer_size, "putback area cannot be larger than the get area");
         }
 
         virtual ~sockstreambuf (

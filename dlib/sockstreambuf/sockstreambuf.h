@@ -4,7 +4,10 @@
 #define DLIB_SOCKStREAMBUF_Hh_
 
 #include <iosfwd>
+#include <limits>
+#include <memory>
 #include <streambuf>
+#include "../assert.h"
 #include "../sockets.h"
 #include "sockstreambuf_abstract.h"
 #include "sockstreambuf_unbuffered.h"
@@ -45,14 +48,17 @@ namespace dlib
             out_buffer_size(out_buffer_size_),
             in_buffer_size(in_buffer_size_),
             max_putback(max_putback_),
-            out_buffer(new char[out_buffer_size]),
-            in_buffer(new char[in_buffer_size]),
             autoflush(false)
         {
-            DLIB_ASSERT(out_buffer_size > 0);
-            DLIB_ASSERT(in_buffer_size > 0);
-            DLIB_ASSERT(max_putback >= 0);
-            DLIB_ASSERT(max_putback < in_buffer_size, "putback area cannot be larger than the get area");
+            DLIB_ASSERT(0 < out_buffer_size && out_buffer_size <= std::numeric_limits<int>::max(),
+                "out_buffer_size must be in the range (0, INT_MAX]");
+            DLIB_ASSERT(0 < in_buffer_size && in_buffer_size <= std::numeric_limits<int>::max(),
+                "in_buffer_size must be in the range (0, INT_MAX]");
+            DLIB_ASSERT(0 <= max_putback && max_putback < in_buffer_size,
+                "max_putback must be in the range [0, in_buffer_size)");
+
+            out_buffer.reset(new char[static_cast<size_t>(out_buffer_size)]);
+            in_buffer.reset(new char[static_cast<size_t>(in_buffer_size)]);
             init();
         }
 
@@ -67,12 +73,7 @@ namespace dlib
                 in_buffer_size_,
                 max_putback_
             )
-        {
-            DLIB_ASSERT(out_buffer_size > 0);
-            DLIB_ASSERT(in_buffer_size > 0);
-            DLIB_ASSERT(max_putback >= 0);
-            DLIB_ASSERT(max_putback < in_buffer_size, "putback area cannot be larger than the get area");
-        }
+        {}
 
         virtual ~sockstreambuf (
         )
@@ -159,8 +160,8 @@ namespace dlib
         const std::streamsize out_buffer_size;
         const std::streamsize in_buffer_size;
         const std::streamsize max_putback;
-        std::unique_ptr<char> out_buffer;
-        std::unique_ptr<char> in_buffer;
+        std::unique_ptr<char[]> out_buffer;
+        std::unique_ptr<char[]> in_buffer;
         bool autoflush;
     
     };
